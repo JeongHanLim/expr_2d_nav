@@ -116,3 +116,6 @@ class reptile(object):
 
     def save(self, path):
         self.model.save(path)
+
+    def adapt(self, total_timesteps):
+        self.model.learn(total_timesteps=total_timesteps)
