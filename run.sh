@@ -1,0 +1,1 @@
+python main.py --path /workspace/disk/mjyoo2/2021paper --midclass reptile-motiv --subclass mdp_test --description test_of_the_mdp_environment --num_workers 8 --total_timesteps 500000 --adapt_timesteps 500000 --alpha 0.25

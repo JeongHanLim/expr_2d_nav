@@ -14,6 +14,7 @@ from reptile_callback import LowCallback, reptile
 from expr_manage import ExperimentManager
 
 def run(oper_num, args):
+    np.random.seed()
     goal = np.random.random((2,)) * 512 - 256
     print('env {} goal setting: {}'.format(oper_num, goal))
     env = env_setting(goal)
@@ -23,6 +24,7 @@ def run(oper_num, args):
     print('finish')
 
 def reptile_run(args):
+    np.random.seed()
     goal = np.random.random((2,)) * 512 - 256
     env = env_setting(goal)
     model = model_setting(env, args.num_workers)
@@ -47,7 +49,7 @@ if __name__ == '__main__':
 
     manager = ExperimentManager(args.path, args.midclass, args.subclass)
     manager.make_description(args.description)
-    env_setting = lambda goal: TwoDimNavEnv(goal=goal)
+    env_setting = lambda goal_parameter: TwoDimNavEnv(goal=goal_parameter)
     model_setting = lambda env, expr_num: PPO2(MlpPolicy, env,
                                                tensorboard_log=os.path.join(manager.sub_path, str(expr_num)),
                                                full_tensorboard_log=True)
