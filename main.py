@@ -45,7 +45,9 @@ if __name__ == '__main__':
     parser.add_argument('--total_timesteps',  type=int, default=1000000)
     parser.add_argument('--adapt_timesteps',  type=int, default=300000)
     parser.add_argument('--alpha', type=float, default=0.25)
-    parser.add_argument('-pomdp', type=bool, default=False)
+    parser.add_argument('--pomdp', dest='pomdp', action='store_true')
+    parser.add_argument('--mdp', dest='pomdp', action='store_false')
+    parser.set_defaults(pomdp=False)
     args = parser.parse_args()
 
     manager = ExperimentManager(args.path, args.midclass, args.subclass)
