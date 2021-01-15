@@ -51,8 +51,10 @@ if __name__ == '__main__':
     manager = ExperimentManager(args.path, args.midclass, args.subclass)
     manager.make_description(args.description)
     if args.pomdp:
+        print('pomdp_setting')
         env_setting = lambda goal_parameter: PartialTwoDimNavEnv(goal=goal_parameter)
     else:
+        print('mdp_setting')
         env_setting = lambda goal_parameter: TwoDimNavEnv(goal=goal_parameter)
     model_setting = lambda env, expr_num: PPO2(MlpPolicy, env,
                                                tensorboard_log=os.path.join(manager.sub_path, str(expr_num)),
