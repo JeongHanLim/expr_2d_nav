@@ -39,6 +39,12 @@ class LowCallback(BaseCallback):
         self.recv_sock.connect('tcp://localhost:{}'.format(32323))
         self.recv_sock.setsockopt_string(zmq.SUBSCRIBE, '')
 
+    def _on_training_start(self) -> None:
+        res = pkl.loads(self.recv_sock.recv())
+        if res['description'] == 'parameters':
+            model_parameter = res['parameters']
+            self.model.load_parameters(model_parameter)
+
     def _on_rollout_end(self) -> None:
         """
         This event is triggered before updating the policy.
@@ -73,6 +79,9 @@ class reptile(object):
         self.alpha = alpha
         self.model = model
         self.env = env
+        model_parameter = self.model.get_parameters()
+        msg = {'description': 'parameters', 'parameters': model_parameter}
+        self.send_sock.send(pkl.dumps(msg))
 
     def run(self):
         while True:

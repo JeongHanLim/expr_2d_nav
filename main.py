@@ -9,7 +9,7 @@ import argparse
 from stable_baselines import PPO2
 from stable_baselines.common.policies import MlpPolicy
 from multiprocessing import Process
-from two_dim_nav_env import TwoDimNavEnv
+from two_dim_nav_env import TwoDimNavEnv, PartialTwoDimNavEnv
 from reptile_callback import LowCallback, reptile
 from expr_manage import ExperimentManager
 
@@ -37,19 +37,23 @@ def reptile_run(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='experiment setting')
-    parser.add_argument('--path', '-p', type=str)
-    parser.add_argument('--midclass', '-mc', type=str)
-    parser.add_argument('--subclass', '-sc', type=str)
-    parser.add_argument('--description', '-des', type=str)
-    parser.add_argument('--num_workers', '-n', type=int, default=4)
-    parser.add_argument('--total_timesteps', '-tt', type=int, default=1000000)
-    parser.add_argument('--adapt_timesteps', '-at', type=int, default=300000)
-    parser.add_argument('--alpha', '-a', type=float, default=0.25)
+    parser.add_argument('--path', type=str)
+    parser.add_argument('--midclass',  type=str)
+    parser.add_argument('--subclass',  type=str)
+    parser.add_argument('--description',  type=str)
+    parser.add_argument('--num_workers',  type=int, default=4)
+    parser.add_argument('--total_timesteps',  type=int, default=1000000)
+    parser.add_argument('--adapt_timesteps',  type=int, default=300000)
+    parser.add_argument('--alpha', type=float, default=0.25)
+    parser.add_argument('-pomdp', type=bool, default=False)
     args = parser.parse_args()
 
     manager = ExperimentManager(args.path, args.midclass, args.subclass)
     manager.make_description(args.description)
-    env_setting = lambda goal_parameter: TwoDimNavEnv(goal=goal_parameter)
+    if args.pomdp:
+        env_setting = lambda goal_parameter: PartialTwoDimNavEnv(goal=goal_parameter)
+    else:
+        env_setting = lambda goal_parameter: TwoDimNavEnv(goal=goal_parameter)
     model_setting = lambda env, expr_num: PPO2(MlpPolicy, env,
                                                tensorboard_log=os.path.join(manager.sub_path, str(expr_num)),
                                                full_tensorboard_log=True)

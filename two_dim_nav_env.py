@@ -49,3 +49,25 @@ class TwoDimNavEnv(gym.Env):
     @property
     def _distance(self):
         return abs(self.goal_x - self.pos_x) + abs(self.goal_y - self.pos_y)
+
+
+class PartialTwoDimNavEnv(TwoDimNavEnv):
+    def step(self, action):
+        state, reward, done, info = super().step(action)
+        rand_var = np.random.random()
+        if rand_var < 0.5:
+            state[0] = 0
+        else:
+            state[1] = 0
+        info = {'timesteps': self.timesteps}
+
+        return state, reward, done, info
+
+    def reset(self):
+        state = super().reset()
+        rand_var = np.random.random()
+        if rand_var < 0.5:
+            state[0] = 0
+        else:
+            state[1] = 0
+        return state
