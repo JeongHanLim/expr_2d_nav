@@ -12,7 +12,7 @@ class LowCallback(BaseCallback):
 
     :param verbose: (int) Verbosity level 0: not output 1: info 2: debug
     """
-    def __init__(self, oper_num, verbose=0):
+    def __init__(self, oper_num, port, verbose=0):
         super(LowCallback, self).__init__(verbose)
         # Those variables will be accessible in the callback
         # (they are defined in the base class)
@@ -33,10 +33,10 @@ class LowCallback(BaseCallback):
         # self.parent = None  # type: Optional[BaseCallback]
         ctx = zmq.Context()
         self.sock = ctx.socket(zmq.REQ)
-        self.sock.connect('tcp://localhost:{}'.format(23232))
+        self.sock.connect('tcp://localhost:{}'.format(port))
         self.request_msg = {'operator_number': oper_num, 'description': 'request'}
         self.recv_sock = ctx.socket(zmq.SUB)
-        self.recv_sock.connect('tcp://localhost:{}'.format(32323))
+        self.recv_sock.connect('tcp://localhost:{}'.format(port+1))
         self.recv_sock.setsockopt_string(zmq.SUBSCRIBE, '')
 
     def _on_training_start(self) -> None:
@@ -68,12 +68,12 @@ class LowCallback(BaseCallback):
         self.sock.send(pkl.dumps(msg))
 
 class reptile(object):
-    def __init__(self, num_of_operator, alpha, env, model):
+    def __init__(self, num_of_operator, port, alpha, env, model):
         ctx = zmq.Context()
         self.sock = ctx.socket(zmq.REP)
-        self.sock.bind('tcp://*:{}'.format(23232))
+        self.sock.bind('tcp://*:{}'.format(port))
         self.send_sock = ctx.socket(zmq.PUB)
-        self.send_sock.bind('tcp://*:{}'.format(32323))
+        self.send_sock.bind('tcp://*:{}'.format(port+1))
         self.num_of_operator = num_of_operator
         self.response_msg = {'description': 'response'}
         self.alpha = alpha

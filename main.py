@@ -19,7 +19,7 @@ def run(oper_num, args):
     print('env {} goal setting: {}'.format(oper_num, goal))
     env = env_setting(goal)
     model = model_setting(env, oper_num)
-    callback = LowCallback(oper_num)
+    callback = LowCallback(oper_num, args.port)
     model.learn(total_timesteps=args.total_timesteps, callback=callback)
     print('finish')
 
@@ -28,7 +28,7 @@ def reptile_run(args):
     goal = np.random.random((2,)) * 512 - 256
     env = env_setting(goal)
     model = model_setting(env, args.num_workers)
-    algo = reptile(num_of_operator=args.num_workers, alpha=args.alpha, model=model, env=env)
+    algo = reptile(num_of_operator=args.num_workers, port=args.port, alpha=args.alpha, model=model, env=env)
     algo.run()
     algo.save(os.path.join(manager.sub_path, 'model'))
     print('finish')
@@ -47,6 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('--alpha', type=float, default=0.25)
     parser.add_argument('--pomdp', dest='pomdp', action='store_true')
     parser.add_argument('--mdp', dest='pomdp', action='store_false')
+    parser.add_argument('--port', type=int, default=22222)
     parser.set_defaults(pomdp=False)
     args = parser.parse_args()
 
