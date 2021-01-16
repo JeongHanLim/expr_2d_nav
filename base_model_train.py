@@ -35,6 +35,6 @@ if __name__ == '__main__':
     else:
         env = TwoDimNavEnv(goal)
 
-    model =PPO2(MlpPolicy, env, tensorboard_log=manager.sub_path, full_tensorboard_log=True)
+    model =PPO2(MlpPolicy, env, tensorboard_log=manager.sub_path, full_tensorboard_log=True, n_steps=1024)
     model.learn(total_timesteps=args.total_timesteps)
     model.save(os.path.join(manager.sub_path, 'model'))

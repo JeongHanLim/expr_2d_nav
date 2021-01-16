@@ -21,7 +21,7 @@ class TwoDimNavEnv(gym.Env):
         self.pos_y = np.clip(self.pos_y + action[1], a_min=-self.grid_size, a_max=self.grid_size)
         reward = 0
         done = False
-        if self._distance < 1:
+        if self._distance < 4:
             done = True
             reward += 100
         if self.timesteps > 300:
