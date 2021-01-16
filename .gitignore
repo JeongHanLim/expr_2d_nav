@@ -286,6 +286,5 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-pomdp_run.sh
-run.sh
+*.sh
 # End of https://www.toptal.com/developers/gitignore/api/python,linux,windows,pycharm
