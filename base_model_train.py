@@ -16,6 +16,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str)
     parser.add_argument('--midclass',  type=str)
     parser.add_argument('--subclass',  type=str)
+    parser.add_argument('--description',  type=str)
     parser.add_argument('--total_timesteps',  type=int, default=1000000)
     parser.add_argument('--pomdp', dest='pomdp', action='store_true')
     parser.add_argument('--mdp', dest='pomdp', action='store_false')
