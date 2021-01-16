@@ -15,7 +15,8 @@ from expr_manage import ExperimentManager
 
 def run(oper_num, args):
     np.random.seed()
-    goal = np.random.random((2,)) * 512 - 256
+    goal = np.random.random() * 2 * np.pi
+    goal = np.array([np.cos(goal), np.sin(goal)]) * 256
     print('env {} goal setting: {}'.format(oper_num, goal))
     env = env_setting(goal)
     model = model_setting(env, oper_num)
@@ -25,7 +26,8 @@ def run(oper_num, args):
 
 def reptile_run(args):
     np.random.seed()
-    goal = np.random.random((2,)) * 512 - 256
+    goal = np.random.random() * 2 * np.pi
+    goal = np.array([np.cos(goal), np.sin(goal)]) * 256
     env = env_setting(goal)
     model = model_setting(env, args.num_workers)
     algo = reptile(num_of_operator=args.num_workers, port=args.port, alpha=args.alpha, model=model, env=env)

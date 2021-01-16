@@ -27,7 +27,8 @@ if __name__ == '__main__':
     manager.make_description(args.description)
 
     np.random.seed()
-    goal = np.random.random((2,)) * 512 - 256
+    goal = np.random.random() * 2 * np.pi
+    goal = np.array([np.cos(goal), np.sin(goal)]) * 256
 
     if args.pomdp:
         env = PartialTwoDimNavEnv(goal)
