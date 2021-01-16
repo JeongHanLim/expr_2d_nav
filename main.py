@@ -61,7 +61,7 @@ if __name__ == '__main__':
     else:
         print('mdp_setting')
         env_setting = lambda goal_parameter: TwoDimNavEnv(goal=goal_parameter)
-    model_setting = lambda env, expr_num: PPO2(MlpPolicy, env,
+    model_setting = lambda env, expr_num: PPO2(MlpPolicy, env, n_steps=1024,
                                                tensorboard_log=os.path.join(manager.sub_path, str(expr_num)),
                                                full_tensorboard_log=True)
 
