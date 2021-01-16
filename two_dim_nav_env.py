@@ -23,6 +23,7 @@ class TwoDimNavEnv(gym.Env):
         done = False
         if self._distance < 1:
             done = True
+            reward += 100
         if self.timesteps > 300:
             done = True
             reward += -100
