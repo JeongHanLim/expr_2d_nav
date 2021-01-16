@@ -44,6 +44,7 @@ class LowCallback(BaseCallback):
         if res['description'] == 'parameters':
             model_parameter = res['parameters']
             self.model.load_parameters(model_parameter)
+        print('end')
 
     def _on_rollout_end(self) -> None:
         """
@@ -79,6 +80,7 @@ class reptile(object):
         self.alpha = alpha
         self.model = model
         self.env = env
+        time.sleep(1.0)
         model_parameter = self.model.get_parameters()
         msg = {'description': 'parameters', 'parameters': model_parameter}
         self.send_sock.send(pkl.dumps(msg))

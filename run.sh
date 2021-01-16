@@ -1,1 +1,1 @@
-python main.py --path /workspace/disk/mjyoo2/2021paper --midclass reptile-motiv --subclass mdp_test_2 --description test_of_the_mdp_environment --num_workers 8 --total_timesteps 256000 --adapt_timesteps 12800 --alpha 0.25 --pomdp False
+python main.py --path /workspace/disk/mjyoo2/2021paper --midclass reptile-motiv --subclass mdp_test_210115_3 --description test_of_the_mdp_environment_2000_updates_2000_adapt --num_workers 8 --total_timesteps 256000 --adapt_timesteps 256000 --alpha 0.25 --mdp --port 22255
