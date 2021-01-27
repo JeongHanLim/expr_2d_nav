@@ -5,117 +5,125 @@ import torch.nn as nn
 
 from tqdm import tqdm
 from CycleGAN.model import CycleGAN, Discriminator, CycleGANGen
+from CycleGAN.evaluator import Evaluator
+from CycleGAN.lr_scheduler import LR_Scheduler
+from CycleGAN.dataloader import Transitions
+from CycleGAN.summaries import TensorboardSummary
 
 class Trainer(object):
     def __init__(self, args):
         self.args = args
 
-        # Define Saver
-        self.saver = Saver(args)
-        self.saver.save_experiment_config()
         # Define Tensorboard Summary
-        self.summary = TensorboardSummary(self.saver.experiment_dir)
+        self.summary = TensorboardSummary('./')
         self.writer = self.summary.create_summary()
 
         # Define Dataloader
-        kwargs = {'num_workers': args.workers, 'pin_memory': True}
-        self.train_loader, self.val_loader, self.test_loader, self.nclass = make_data_loader(args, **kwargs)
+        self.train_loader = Transitions('./')
+        self.test_loader = Transitions('./', split='test')
 
         # Define network
         cyclegan = CycleGAN(latent_space=16, state_space=3)
         generator = CycleGANGen(latent_space=16, state_space=3)
-        discriminator = Discriminator(latent_space=16)
+        discriminator_1 = Discriminator(latent_space=16)
+        discriminator_2 = Discriminator(latent_space=16)
 
-        gan_params = [{'params': cyclegan.parameters(), 'lr': args.lr}]
-        dis_params = [{'params': discriminator.parameters(), 'lr': args.lr}]
+        gen_params = [{'params': cyclegan.parameters(), 'lr': args.lr}]
+        dis_params_1 = [{'params': discriminator_1.parameters(), 'lr': args.lr}]
+        dis_params_2 = [{'params': discriminator_2.parameters(), 'lr': args.lr}]
 
         # Define Optimizer
-        gan_optimizer = torch.optim.Adam(gan_params)
-        dis_optimizer = torch.optim.Adam(dis_params)
+        gen_optimizer = torch.optim.Adam(gen_params)
+        dis_optimizer_1 = torch.optim.Adam(dis_params_1)
+        dis_optimizer_2 = torch.optim.Adam(dis_params_2)
 
         # Define Criterion
         # whether to use class balanced weights
         self.CycleGANLoss = nn.MSELoss()
         self.DiscLoss = nn.MSELoss()
         self.GANLoss = nn.BCELoss()
+        self.VAELoss = nn.MSELoss()
 
-        self.discriminator, self.cyclegan, self.generator, self.optimizer \
-            = discriminator, cyclegan, generator, optimizer
+        self.discriminator_1, self.discriminator_2 = discriminator_1, discriminator_2
+        self.cyclegan, self.generator, self.gen_optimizer = cyclegan, generator, gen_optimizer
+        self.dis_optimizer_1, self.dis_optimizer_2 = dis_optimizer_1, dis_optimizer_2
 
         # Define Evaluator
-        self.evaluator = Evaluator(self.nclass)
+        self.evaluator = Evaluator()
         # Define lr scheduler
-        self.scheduler = LR_Scheduler(args.lr_scheduler, args.lr,
-                                      args.epochs, len(self.train_loader))
+        self.gen_scheduler = LR_Scheduler(args.lr, args.epochs)
+        self.dis_scheduler = LR_Scheduler(args.lr, args.epochs)
 
         # Using cuda
         if args.cuda:
             self.model = torch.nn.DataParallel(self.model, device_ids=self.args.gpu_ids)
             self.model = self.model.cuda()
 
-        # Resuming checkpoint
-        self.best_pred = 0.0
-        if args.resume is not None:
-            if not os.path.isfile(args.resume):
-                raise RuntimeError("=> no checkpoint found at '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            if args.cuda:
-                self.model.module.load_state_dict(checkpoint['state_dict'])
-            else:
-                self.model.load_state_dict(checkpoint['state_dict'])
-            if not args.ft:
-                self.optimizer.load_state_dict(checkpoint['optimizer'])
-            self.best_pred = checkpoint['best_pred']
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
-
-        # Clear start epoch if fine-tuning
-        if args.ft:
-            args.start_epoch = 0
-
-    def training(self, epoch):
+    def gen_training(self, epoch):
         train_loss = 0.0
-        self.model.train()
+        self.cyclegan.train()
         tbar = tqdm(self.train_loader)
         num_img_tr = len(self.train_loader)
         for i, sample in enumerate(tbar):
-            image, target = sample['image'], sample['label']
-            if self.args.cuda:
-                image, target = image.cuda(), target.cuda()
-            self.scheduler(self.optimizer, i, epoch, self.best_pred)
-            self.optimizer.zero_grad()
-            output = self.model(image)
-            loss = self.criterion(output, target)
+            input_data_1, input_data_2 = sample
+            self.gen_scheduler(self.gen_optimizer, epoch)
+            self.gen_optimizer.zero_grad()
+            decode_state_1, decode_state_2, cycle_latent_vector_1, cycle_latent_vector_2, \
+            latent_vector_1, latent_vector_2, discrim_1, discrim_2 = self.model(input_data_1, input_data_2)
+            cycle_loss = self.CycleGANLoss(cycle_latent_vector_1, latent_vector_1) + self.CycleGANLoss(cycle_latent_vector_2, latent_vector_2)
+            gan_loss = self.GANLoss(discrim_1, discrim_2)
+            vae_loss = self.VAELoss(input_data_1, decode_state_1) + self.VAELoss(input_data_2, decode_state_2)
+            loss = cycle_loss + gan_loss + vae_loss
             loss.backward()
-            self.optimizer.step()
+            self.gen_optimizer.step()
             train_loss += loss.item()
             tbar.set_description('Train loss: %.3f' % (train_loss / (i + 1)))
             self.writer.add_scalar('train/total_loss_iter', loss.item(), i + num_img_tr * epoch)
 
-            # Show 10 * 3 inference results each epoch
-            if i % (num_img_tr // 10) == 0:
-                global_step = i + num_img_tr * epoch
-                self.summary.visualize_image(self.writer, self.args.dataset, image, target, output, global_step)
-
         self.writer.add_scalar('train/total_loss_epoch', train_loss, epoch)
-        print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
-        print('Loss: %.3f' % train_loss)
 
-        if self.args.no_val:
-            # save checkpoint every epoch
-            is_best = False
-            self.saver.save_checkpoint({
-                'epoch': epoch + 1,
-                'state_dict': self.model.module.state_dict(),
-                'optimizer': self.optimizer.state_dict(),
-                'best_pred': self.best_pred,
-            }, is_best)
+    def dis_training(self, epoch):
+        train_loss_1 = 0.0
+        train_loss_2 = 0.0
+
+        self.discriminator_1.train()
+        self.discriminator_2.train()
+
+        tbar = tqdm(self.train_loader)
+        num_img_tr = len(self.train_loader)
+
+        for i, sample in enumerate(tbar):
+            self.dis_scheduler(self.dis_optimizer_1, epoch)
+            self.dis_scheduler(self.dis_optimizer_2, epoch)
+            input_data_1, input_data_2 = sample
+            transfer_latent_vector_1, transfer_latent_vector_2, latent_vector_1, latent_vector_2 \
+                = self.generator(input_data_1, input_data_2)
+            data_1 = torch.cat(transfer_latent_vector_1, latent_vector_1)
+            data_2 = torch.cat(transfer_latent_vector_2, latent_vector_2)
+            labels = torch.cat((torch.zeros(), torch.ones()))
+            output_1 = self.discriminator_1(data_1)
+            output_2 = self.discriminator_2(data_2)
+            self.dis_optimizer_1.zero_grad()
+            loss_1 = self.DiscLoss(output_1, labels)
+            loss_1.backward()
+            self.dis_optimizer_1.step()
+
+            self.dis_optimizer_2.zero_grad()
+            loss_2 = self.DiscLoss(output_2, labels)
+            loss_2.backward()
+            self.dis_optimizer_2.step()
+
+            train_loss_1 += loss_1.item()
+            train_loss_2 += loss_2.item()
+            self.writer.add_scalar('train/dis_loss_1_iter', loss_1.item(), i + num_img_tr * epoch)
+            self.writer.add_scalar('train/dis_loss_2_iter', loss_2.item(), i + num_img_tr * epoch)
+
+        self.writer.add_scalar('train/total_loss_epoch', train_loss_1, epoch)
+        self.writer.add_scalar('train/total_loss_epoch', train_loss_2, epoch)
 
     def validation(self, epoch):
         self.model.eval()
-        self.evaluator.reset()
-        tbar = tqdm(self.val_loader, desc='\r')
+        tbar = tqdm(self.test_loader, desc='\r')
         test_loss = 0.0
         for i, sample in enumerate(tbar):
             image, target = sample['image'], sample['label']
@@ -133,27 +141,8 @@ class Trainer(object):
             self.evaluator.add_batch(target, pred)
 
         # Fast test during the training
-        Acc = self.evaluator.Pixel_Accuracy()
-        Acc_class = self.evaluator.Pixel_Accuracy_Class()
-        mIoU = self.evaluator.Mean_Intersection_over_Union()
-        FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
         self.writer.add_scalar('val/total_loss_epoch', test_loss, epoch)
-        self.writer.add_scalar('val/mIoU', mIoU, epoch)
-        self.writer.add_scalar('val/Acc', Acc, epoch)
-        self.writer.add_scalar('val/Acc_class', Acc_class, epoch)
-        self.writer.add_scalar('val/fwIoU', FWIoU, epoch)
-        print('Validation:')
-        print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
-        print("Acc:{}, Acc_class:{}, mIoU:{}, fwIoU: {}".format(Acc, Acc_class, mIoU, FWIoU))
-        print('Loss: %.3f' % test_loss)
 
-        new_pred = mIoU
-        if new_pred > self.best_pred:
-            is_best = True
-            self.best_pred = new_pred
-            self.saver.save_checkpoint({
-                'epoch': epoch + 1,
-                'state_dict': self.model.module.state_dict(),
-                'optimizer': self.optimizer.state_dict(),
-                'best_pred': self.best_pred,
-            }, is_best)
+if __name__ == '__main__':
+    args = {}
+    trainer = Trainer(args)

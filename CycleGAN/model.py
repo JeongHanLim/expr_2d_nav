@@ -21,8 +21,8 @@ class CycleGAN(nn.Module):
         self.cycle_latent_vector_2 = None
         self.cycle_state_1 = None
         self.cycle_state_2 = None
-        self.enc_dec_1 = None
-        self.enc_dec_2 = None
+        self.decode_state_1 = None
+        self.decode_state_2 = None
         self.discrim_1 = None
         self.discrim_2 = None
 
@@ -35,14 +35,15 @@ class CycleGAN(nn.Module):
         self.transfer_latent_vector_1 = self.gen_2(self.latent_vector_2)
         self.cycle_latent_vector_2 = self.gen_1(self.transfer_latent_vector_1)
 
-        self.enc_dec_1 = self.dec_1(self.latent_vector_1)
+        self.decode_state_1 = self.dec_1(self.latent_vector_1)
         self.cycle_state_1 = self.dec_1(self.cycle_latent_vector_1)
-        self.enc_dec_2 = self.dec_2(self.latent_vector_2)
+        self.decode_state_2 = self.dec_2(self.latent_vector_2)
         self.cycle_state_2 = self.dec_2(self.cycle_latent_vector_2)
         self.discrim_1 = self.dis_1(self.transfer_latent_vector_1)
         self.discrim_2 = self.dis_2(self.transfer_latent_vector_2)
 
-        return self.enc_dec_1, self.cycle_state_1, self.enc_dec_2, self.cycle_state_2
+        return self.decode_state_1, self.decode_state_2, self.cycle_latent_vector_1, self.cycle_latent_vector_2, \
+               self.latent_vector_1, self.latent_vector_2, self.discrim_1, self.discrim_2
 
 
 class CycleGANGen(nn.Module):
@@ -60,7 +61,7 @@ class CycleGANGen(nn.Module):
         transfer_latent_vector_2 = self.gen_1(latent_vector_1)
         transfer_latent_vector_1 = self.gen_2(latent_vector_2)
 
-        return transfer_latent_vector_1, transfer_latent_vector_2
+        return transfer_latent_vector_1, transfer_latent_vector_2, latent_vector_1, latent_vector_2
 
 
 class Encoder(nn.Module):
