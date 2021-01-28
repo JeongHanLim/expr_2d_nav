@@ -97,9 +97,9 @@ class Decoder(nn.Module):
 class Generator(nn.Module):
     def __init__(self, latent_space):
         super().__init__()
-        self.layer_1_2 = nn.Linear(latent_space//2, 64)
+        self.layer_1 = nn.Linear(latent_space//2, 64)
         self.layer_2 = nn.Linear(64, 64)
-        self.layer_3 = nn.Linear(64, latent_space)
+        self.layer_3 = nn.Linear(64, latent_space//2)
 
     def forward(self, x):
         batch, len = x.shape

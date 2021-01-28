@@ -39,7 +39,7 @@ def reptile_run(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='experiment setting')
-    parser.add_argument('--path', type=str)
+    parser.add_argument('--path', type=str, default='./')
     parser.add_argument('--midclass',  type=str)
     parser.add_argument('--subclass',  type=str)
     parser.add_argument('--description',  type=str)

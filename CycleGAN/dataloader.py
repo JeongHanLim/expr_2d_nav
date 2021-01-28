@@ -19,14 +19,14 @@ class Transitions(data.Dataset):
         self.path_2 = path_2
         self.split = split
 
-        with open(path_1, 'wb') as f:
+        with open(path_1, 'rb') as f:
             self.dataset_1 = pkl.load(f)
-        with open(path_2, 'wb') as f:
+        with open(path_2, 'rb') as f:
             self.dataset_2 = pkl.load(f)
 
     def __getitem__(self, index):
-        sample_1 = self.dataset_1[index]
-        sample_2 = self.dataset_2[index]
+        sample_1 = self.dataset_1[index]/256
+        sample_2 = self.dataset_2[index]/256
         return self.transform(sample_1), self.transform(sample_2)
 
     def __len__(self):

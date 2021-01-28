@@ -3,7 +3,6 @@ import numpy as np
 
 class Evaluator(object):
     def __init__(self):
-        self.num_class = num_class
         self.latent_vector_1 = None
         self.latent_vector_2 = None
         self.decode_state_1 = None
