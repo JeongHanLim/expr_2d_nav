@@ -2,6 +2,7 @@ from __future__ import print_function, division
 import torch
 import pickle as pkl
 import torch.utils.data as data
+import numpy as np
 from torchvision import transforms
 
 class ToTensor(object):
@@ -20,9 +21,9 @@ class Transitions(data.Dataset):
         self.split = split
 
         with open(path_1, 'rb') as f:
-            self.dataset_1 = pkl.load(f)
+            self.dataset_1 = np.array(pkl.load(f))
         with open(path_2, 'rb') as f:
-            self.dataset_2 = pkl.load(f)
+            self.dataset_2 = np.array(pkl.load(f))
 
     def __getitem__(self, index):
         sample_1 = self.dataset_1[index]/256

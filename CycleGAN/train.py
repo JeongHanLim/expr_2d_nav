@@ -2,6 +2,7 @@ import torch
 import os
 import numpy as np
 import torch.nn as nn
+import pickle as pkl
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -11,6 +12,9 @@ from CycleGAN.lr_scheduler import LR_Scheduler
 from CycleGAN.dataloader import Transitions
 from CycleGAN.summaries import TensorboardSummary
 
+def KLloss(logvar, mu):
+    return -0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp())
+
 class Trainer(object):
     def __init__(self, lr=0.001, epochs=50):
         self.lr = lr
@@ -18,13 +22,13 @@ class Trainer(object):
         # Define Tensorboard Summary
         self.summary = TensorboardSummary('./')
         self.writer = self.summary.create_summary()
-        self.batch_size = 256
-        self.latent_space = 16
+        self.batch_size = 1024
+        self.latent_space = 4
         self.gen_iter = 0
         self.dis_iter = 0
         # Define Dataloader
-        train_set= Transitions('./dataset/1_state.pkl', './dataset/2_state.pkl')
-        self.train_loader = DataLoader(train_set, batch_size=self.batch_size, shuffle=True,)
+        self.train_set = Transitions('./dataset/1_state.pkl', './dataset/2_state.pkl')
+        self.train_loader = DataLoader(self.train_set, batch_size=self.batch_size, shuffle=True,)
         self.test_loader = Transitions('./dataset/1_state.pkl', './dataset/2_state.pkl', split='test')
 
         # Define network
@@ -76,11 +80,13 @@ class Trainer(object):
             self.gen_optimizer.zero_grad()
             labels = torch.ones([input_data_1.shape[0], 1])
             decode_state_1, decode_state_2, cycle_latent_vector_1, cycle_latent_vector_2, \
-            latent_vector_1, latent_vector_2, discrim_1, discrim_2 = self.cyclegan(input_data_1, input_data_2)
+            latent_vector_1, latent_vector_2, discrim_1, discrim_2, mu_1, mu_2, log_var_1, log_var_2, \
+            transfer_latent_vector_1, transfer_latent_vector_2 = self.cyclegan(input_data_1, input_data_2)
             cycle_loss = self.CycleGANLoss(cycle_latent_vector_1, latent_vector_1) + self.CycleGANLoss(cycle_latent_vector_2, latent_vector_2)
             gan_loss = self.GANLoss(discrim_1, labels) + self.GANLoss(discrim_2, labels)
             vae_loss = self.VAELoss(input_data_1, decode_state_1) + self.VAELoss(input_data_2, decode_state_2)
-            loss = cycle_loss + gan_loss + vae_loss
+            kl_loss = KLloss(log_var_1, mu_1) + KLloss(log_var_2, mu_2)
+            loss = cycle_loss + gan_loss + vae_loss + kl_loss
             loss.backward()
             self.gen_optimizer.step()
             train_loss += loss.item()
@@ -112,12 +118,12 @@ class Trainer(object):
             output_2 = self.discriminator_2(data_2)
             self.dis_optimizer_1.zero_grad()
             loss_1 = self.DiscLoss(output_1, labels)
-            loss_1.backward()
+            loss_1.backward(retain_graph=True)
             self.dis_optimizer_1.step()
 
             self.dis_optimizer_2.zero_grad()
             loss_2 = self.DiscLoss(output_2, labels)
-            loss_2.backward()
+            loss_2.backward(retain_graph=True)
             self.dis_optimizer_2.step()
 
             train_loss_1 += loss_1.item()
@@ -151,6 +157,17 @@ class Trainer(object):
 if __name__ == '__main__':
     args = {'lr'}
     trainer = Trainer(0.001, 50)
-    for i in range(20):
+    for i in range(50):
         trainer.gen_training(2)
-        trainer.dis_training(2)
+        trainer.dis_training(4)
+    data1 = torch.from_numpy(trainer.train_set.dataset_1).float()
+    data2 = torch.from_numpy(trainer.train_set.dataset_2).float()
+    _, _, _, _, latent_vector_1, latent_vector_2, _, _, _, _, _, _, transfer_latent_vector_1, transfer_latent_vector_2= trainer.cyclegan(data1, data2)
+    with open('./dataset2/transfer_latent_vector_1.pkl', 'wb') as f:
+        pkl.dump(transfer_latent_vector_1.detach().numpy(), f)
+    with open('./dataset2/transfer_latent_vector_2.pkl', 'wb') as f:
+        pkl.dump(transfer_latent_vector_2.detach().numpy(), f)
+    with open('./dataset2/latent_vector_1.pkl', 'wb') as f:
+        pkl.dump(latent_vector_1.detach().numpy(), f)
+    with open('./dataset2/latent_vector_2.pkl', 'wb') as f:
+        pkl.dump(latent_vector_2.detach().numpy(), f)
