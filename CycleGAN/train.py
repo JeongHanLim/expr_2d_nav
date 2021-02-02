@@ -22,7 +22,7 @@ class Trainer(object):
         # Define Tensorboard Summary
         self.summary = TensorboardSummary('./')
         self.writer = self.summary.create_summary()
-        self.batch_size = 1024
+        self.batch_size = 4096
         self.latent_space = 4
         self.gen_iter = 0
         self.dis_iter = 0
@@ -156,10 +156,13 @@ class Trainer(object):
 
 if __name__ == '__main__':
     args = {'lr'}
-    trainer = Trainer(0.001, 50)
+    trainer = Trainer(0.001, 150)
     for i in range(50):
-        trainer.gen_training(2)
-        trainer.dis_training(4)
+        trainer.gen_training(3*i+1)
+        trainer.gen_training(3*i+2)
+        trainer.gen_training(3*i+3)
+        trainer.dis_training(2*i+1)
+        trainer.dis_training(2*i+2)
     data1 = torch.from_numpy(trainer.train_set.dataset_1).float()
     data2 = torch.from_numpy(trainer.train_set.dataset_2).float()
     _, _, _, _, latent_vector_1, latent_vector_2, _, _, _, _, _, _, transfer_latent_vector_1, transfer_latent_vector_2= trainer.cyclegan(data1, data2)

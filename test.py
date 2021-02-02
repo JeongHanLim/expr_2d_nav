@@ -14,7 +14,7 @@ from expr_manage import ExperimentManager
 
 env_setting = lambda goal: TwoDimNavEnv(goal=goal)
 model_setting = lambda env: PPO2(MlpPolicy, env, n_steps=1024, tensorboard_log=os.path.join(manager.sub_path), full_tensorboard_log=True, verbose=1)
-manager = ExperimentManager('D:/2021paper_data', 'base_model', 'base_model_2')
+manager = ExperimentManager('D:/2021paper_data', 'base_model', 'base_model_1')
 
 if __name__ == '__main__':
     goal = np.random.random((2,)) * 512 - 256

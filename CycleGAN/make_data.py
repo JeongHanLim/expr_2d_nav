@@ -30,7 +30,7 @@ if __name__ == '__main__':
             dataset.append(state)
             action, _ = model.predict(state)
             state, reward, done, info = env.step(action)
-            if len(dataset) == 100000:
+            if len(dataset) == 500000:
                 with open('./dataset/1_state.pkl', 'wb') as f:
                     pkl.dump(dataset, f)
                     save = True
